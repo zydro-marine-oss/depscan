@@ -1,6 +1,8 @@
 # depscan
+
 Scans all projects in a GitHub org for dependencies &amp; generates a license report.
-!!! This is AI slop. Use at your own risk. !!!
+
+**!!! This is AI slop. Use at your own risk. !!!**
 
 Scans one or more GitHub organizations’ repositories for **`package.json`**, **`requirements.txt`**, **`pyproject.toml`** (PEP 621 `project` / Poetry / Flit metadata), and **`setup.py`** (`install_requires` / `extras_require` via AST), resolves **registry-declared** licenses from npm and PyPI, and writes **CSV on stdout** (summarized license families) or full-detail CSV/Excel files.
 
