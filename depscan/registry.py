@@ -6,6 +6,37 @@ import requests
 NPM_REGISTRY = "https://registry.npmjs.org"
 PYPI_JSON = "https://pypi.org/pypi"
 
+_MAX_LICENSE_FIELD_CHARS = 200
+_MAX_LICENSE_NEWLINES = 1
+_MAX_LICENSE_WORDS = 48
+
+_LICENSE_BODY_MARKERS = (
+    "permission is hereby granted",
+    "the software is provided",
+    "terms and conditions for use, reproduction",
+    "redistributions of source code",
+    "hereby grants you a",
+)
+
+
+def sanitize_registry_license(raw):
+    if raw is None or not isinstance(raw, str):
+        return "unknown", ""
+    s = raw.strip()
+    if not s:
+        return "unknown", ""
+    if len(s) > _MAX_LICENSE_FIELD_CHARS:
+        return "unknown", "full_license_text"
+    if s.count("\n") > _MAX_LICENSE_NEWLINES:
+        return "unknown", "full_license_text"
+    if len(s.split()) > _MAX_LICENSE_WORDS:
+        return "unknown", "full_license_text"
+    low = s.lower()
+    for marker in _LICENSE_BODY_MARKERS:
+        if marker in low:
+            return "unknown", "full_license_text"
+    return s, ""
+
 
 def npm_license_from_payload(data):
     if not isinstance(data, dict):
@@ -92,7 +123,10 @@ def fetch_npm_license(package_name, session=None):
         return "unknown", "invalid_json"
     lic, e = npm_license_from_payload(data)
     if lic:
-        return lic, ""
+        clean, se = sanitize_registry_license(lic)
+        if se:
+            return clean, se
+        return clean, ""
     return "unknown", e or "no_license"
 
 
@@ -111,7 +145,10 @@ def fetch_pypi_license(project_name, session=None):
         return "unknown", "invalid_json"
     lic, e = pypi_license_from_payload(data)
     if lic:
-        return lic, ""
+        clean, se = sanitize_registry_license(lic)
+        if se:
+            return clean, se
+        return clean, ""
     return "unknown", e or "no_license"
 
 

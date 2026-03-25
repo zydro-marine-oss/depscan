@@ -8,6 +8,7 @@ from depscan.custom_formatter import init_logging
 from depscan import paths
 from depscan import registry
 from depscan import report
+from depscan.scan_docker import iter_dockerfile_deps
 from depscan.scan_node import iter_package_json_deps
 from depscan.scan_python import iter_all_pypi_manifest_deps
 
@@ -26,6 +27,8 @@ def collect_discoveries(orgs, inputs_root):
                 discoveries.append((org, name, "npm", pkg, spec, rel))
             for pkg, spec, rel in iter_all_pypi_manifest_deps(repo_path):
                 discoveries.append((org, name, "pypi", pkg, spec, rel))
+            for eco, pkg, spec, rel in iter_dockerfile_deps(repo_path):
+                discoveries.append((org, name, eco, pkg, spec, rel))
     return discoveries
 
 
@@ -34,8 +37,14 @@ def build_report_rows(discoveries, cache):
     for org, repo, eco, pkg, spec, rel in discoveries:
         if eco == "npm":
             lic, err = cache.npm(pkg)
-        else:
+        elif eco == "pypi":
             lic, err = cache.pypi(pkg)
+        elif eco == "apt":
+            lic, err = "unknown", "apt_not_resolved"
+        elif eco == "git":
+            lic, err = "unknown", "git_not_resolved"
+        else:
+            lic, err = "unknown", "unknown_ecosystem"
         rows.append(
             report.ReportRow(
                 organization=org,
@@ -110,6 +119,8 @@ def main(argv=None):
     else:
         out = args.output or "license-report.xlsx"
         report.write_excel(rows, out)
+
+    report.emit_lookup_warnings(rows)
 
     return 0
 

@@ -1,4 +1,5 @@
 import csv
+import logging
 import sys
 from dataclasses import dataclass
 
@@ -21,28 +22,23 @@ class ReportRow:
     source_file: str
     lookup_error: str
 
-    def as_tuple(self):
+    def org_repo(self):
+        return "{}/{}".format(self.organization, self.repository)
+
+    def as_output_tuple(self):
         return (
-            self.organization,
-            self.repository,
+            self.org_repo(),
             self.ecosystem,
             self.package,
-            self.version_spec,
             self.license,
-            self.source_file,
-            self.lookup_error,
         )
 
 
 HEADERS = (
-    "organization",
     "repository",
     "ecosystem",
     "package",
-    "version_spec",
     "license",
-    "source_file",
-    "lookup_error",
 )
 
 
@@ -59,9 +55,7 @@ def dedupe_rows(rows):
 
 
 STDIO_HEADERS = (
-    "organization",
-    "project",
-    "source_file",
+    "repository",
     "dependency",
     "license",
 )
@@ -74,9 +68,7 @@ def write_stdio(rows, stream=None):
     for r in rows:
         w.writerow(
             (
-                r.organization,
-                r.repository,
-                r.source_file,
+                r.org_repo(),
                 r.package,
                 summarize_license(r.license),
             )
@@ -88,7 +80,7 @@ def write_csv(rows, path):
         w = csv.writer(f)
         w.writerow(HEADERS)
         for r in rows:
-            w.writerow(r.as_tuple())
+            w.writerow(r.as_output_tuple())
 
 
 def write_excel(rows, path):
@@ -98,5 +90,22 @@ def write_excel(rows, path):
     ws = wb.active
     ws.append(list(HEADERS))
     for r in rows:
-        ws.append(list(r.as_tuple()))
+        ws.append(list(r.as_output_tuple()))
     wb.save(path)
+
+
+def emit_lookup_warnings(rows):
+    log = logging.getLogger("depscan")
+    for r in rows:
+        err = (r.lookup_error or "").strip()
+        if not err:
+            continue
+        log.warning(
+            "source_file={} lookup_error={} ({} {} {})".format(
+                r.source_file,
+                err,
+                r.org_repo(),
+                r.ecosystem,
+                r.package,
+            )
+        )
