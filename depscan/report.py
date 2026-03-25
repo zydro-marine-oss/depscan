@@ -73,6 +73,10 @@ def write_stdio(rows, stream=None):
                 summarize_license(r.license),
             )
         )
+    try:
+        stream.flush()
+    except OSError:
+        pass
 
 
 def write_csv(rows, path):

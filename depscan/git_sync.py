@@ -6,6 +6,13 @@ import sys
 
 logger = logging.getLogger(__name__)
 
+_SUBPROCESS_TEXT = dict(
+    capture_output=True,
+    text=True,
+    encoding="utf-8",
+    errors="replace",
+)
+
 
 def _authenticated_clone_url(clone_url, token):
     if not token:
@@ -41,15 +48,13 @@ def sync_repo(clone_url, dest, default_branch, token):
                 "origin",
                 default_branch,
             ],
-            capture_output=True,
-            text=True,
+            **_SUBPROCESS_TEXT,
         )
         if fetch.returncode != 0:
             return False, fetch.stderr or fetch.stdout or "git fetch failed"
         reset = subprocess.run(
             ["git", "-C", dest, "reset", "--hard", "FETCH_HEAD"],
-            capture_output=True,
-            text=True,
+            **_SUBPROCESS_TEXT,
         )
         if reset.returncode != 0:
             return False, reset.stderr or reset.stdout or "git reset failed"
@@ -72,8 +77,7 @@ def sync_repo(clone_url, dest, default_branch, token):
                 url,
                 dest,
             ],
-            capture_output=True,
-            text=True,
+            **_SUBPROCESS_TEXT,
         )
         if clone.returncode != 0:
             return False, clone.stderr or clone.stdout or "git clone failed"

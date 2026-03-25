@@ -3,6 +3,8 @@ import os
 import re
 import sys
 
+from depscan.paths import safe_relpath
+
 # PEP 508: name [extras] version; capture name and remainder (version markers)
 _REQ_RE = re.compile(r"^([A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?)(?:\[[^\]]+\])?(.*)$")
 
@@ -85,7 +87,7 @@ def _iter_pyproject_toml_file(path, repo_root):
         data = _load_toml(path)
     except (OSError, ValueError, TypeError):
         return
-    rel = os.path.relpath(path, repo_root)
+    rel = safe_relpath(path, repo_root)
     project = data.get("project")
     if isinstance(project, dict):
         deps = project.get("dependencies")
@@ -180,7 +182,7 @@ def iter_setup_py_deps(repo_root):
         if "setup.py" not in files:
             continue
         path = os.path.join(root, "setup.py")
-        rel = os.path.relpath(path, repo_root)
+        rel = safe_relpath(path, repo_root)
         try:
             with open(path, "r", encoding="utf-8", errors="replace") as f:
                 src = f.read()
@@ -244,7 +246,7 @@ def iter_requirements_txt_deps(repo_root):
         if "requirements.txt" not in files:
             continue
         path = os.path.join(root, "requirements.txt")
-        rel = os.path.relpath(path, repo_root)
+        rel = safe_relpath(path, repo_root)
         try:
             with open(path, "r", encoding="utf-8", errors="replace") as f:
                 lines = f.readlines()

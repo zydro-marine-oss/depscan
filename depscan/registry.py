@@ -155,6 +155,10 @@ def fetch_pypi_license(project_name, session=None):
 class LicenseCache:
     def __init__(self, session=None):
         self.session = session or requests.Session()
+        self.session.headers.setdefault(
+            "User-Agent",
+            "depscan/0.1 (dependency-license scanner)",
+        )
         self._npm = {}
         self._pypi = {}
 

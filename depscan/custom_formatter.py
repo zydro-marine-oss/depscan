@@ -2,9 +2,14 @@ import logging
 import sys
 
 
-def init_logging(verbose=False, stream=None):
+def init_logging(verbose=False, quiet=False, stream=None):
     stream = stream if stream is not None else sys.stderr
-    level = logging.DEBUG if verbose else logging.WARNING
+    if verbose:
+        level = logging.DEBUG
+    elif quiet:
+        level = logging.WARNING
+    else:
+        level = logging.INFO
     log = logging.getLogger("depscan")
     log.setLevel(level)
     if not log.handlers:

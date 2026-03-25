@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import sys
 
@@ -34,13 +35,21 @@ def collect_discoveries(orgs, inputs_root):
 
 def build_report_rows(discoveries, cache):
     rows = []
-    for org, repo, eco, pkg, spec, rel in discoveries:
+    log = logging.getLogger("depscan")
+    total_d = len(discoveries)
+    log.info(
+        "Resolving licenses for {} dependency row(s); registry calls may take several minutes.".format(
+            total_d
+        )
+    )
+    progress_every = max(100, total_d // 20) if total_d > 200 else 50
+    for idx, (org, repo, eco, pkg, spec, rel) in enumerate(discoveries, start=1):
         if eco == "npm":
             lic, err = cache.npm(pkg)
         elif eco == "pypi":
             lic, err = cache.pypi(pkg)
         elif eco == "apt":
-            lic, err = "unknown", "apt_not_resolved"
+            lic, err = "unknown", ""
         elif eco == "git":
             lic, err = "unknown", "git_not_resolved"
         else:
@@ -57,6 +66,12 @@ def build_report_rows(discoveries, cache):
                 lookup_error=err or "",
             )
         )
+        if total_d and (idx % progress_every == 0 or idx == total_d):
+            log.info(
+                "License progress: {}/{} ({:.0f}%)".format(
+                    idx, total_d, 100.0 * idx / total_d
+                )
+            )
     return report.dedupe_rows(rows)
 
 
@@ -86,11 +101,20 @@ def main(argv=None):
         "-v",
         "--verbose",
         action="store_true",
-        help="Debug log git clone/fetch to stderr",
+        help="DEBUG on stderr (git, caches); default is INFO progress",
+    )
+    p.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="Only warnings and errors on stderr (no progress INFO)",
     )
     args = p.parse_args(argv)
 
-    init_logging(verbose=args.verbose)
+    if args.verbose and args.quiet:
+        sys.stderr.write("Ignoring --quiet because --verbose was set.\n")
+        args.quiet = False
+    init_logging(verbose=args.verbose, quiet=args.quiet)
 
     token = github_api.resolve_token()
     inputs_root = paths.cache_root()
@@ -107,9 +131,17 @@ def main(argv=None):
             continue
         git_sync.sync_all_org_repos(org, repos, inputs_root, token)
 
+    _log = logging.getLogger("depscan")
+    _log.info("Clone/sync finished; scanning cloned trees under {}.".format(inputs_root))
     discoveries = collect_discoveries(args.orgs, inputs_root)
+    _log.info("Collected {} raw dependency discovery row(s).".format(len(discoveries)))
     cache = registry.LicenseCache()
     rows = build_report_rows(discoveries, cache)
+    _log.info(
+        "Deduplicated to {} row(s); writing {} report.".format(
+            len(rows), args.format
+        )
+    )
 
     if args.format == "stdio":
         report.write_stdio(rows)
@@ -120,7 +152,9 @@ def main(argv=None):
         out = args.output or "license-report.xlsx"
         report.write_excel(rows, out)
 
+    _log.info("Report written; emitting lookup warnings if any.")
     report.emit_lookup_warnings(rows)
+    _log.info("Done.")
 
     return 0
 

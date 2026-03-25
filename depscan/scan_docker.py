@@ -2,6 +2,7 @@ import json
 import os
 import re
 import shlex
+from depscan.paths import safe_relpath
 from depscan.scan_python import _walk_repo
 
 _RUN_PREFIX = re.compile(r"^RUN\s+", re.IGNORECASE)
@@ -242,7 +243,7 @@ def _git_from_json_array(arr):
 
 
 def _iter_from_dockerfile(path, repo_root):
-    rel = os.path.relpath(path, repo_root)
+    rel = safe_relpath(path, repo_root)
     try:
         with open(path, "r", encoding="utf-8", errors="replace") as f:
             content = f.read()

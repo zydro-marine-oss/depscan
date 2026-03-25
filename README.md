@@ -8,7 +8,13 @@ Scans one or more GitHub organizations’ repositories for **`package.json`**, *
 
 This reports direct dependencies listed in those manifest files, not full transitive closure from lockfiles. Python manifests skip `node_modules`, `__pycache__`, `.git`, typical venv dirs, and Poetry/path/git URL deps that are not PyPI names.
 
-**Dockerfile / apt / git:** Ecosystem **`apt`** lists Debian package names; **`git`** lists clone URLs (normalized by dropping a trailing `.git`). Version pins and clone branches are still parsed from Dockerfiles but are not written to CSV/Excel. License fields are **`unknown`** with lookup tags **`apt_not_resolved`** / **`git_not_resolved`** (surfaced as stderr warnings with `source_file`). Parsing is heuristic: shell in `RUN` is not fully evaluated (variables, heredocs, and chained `git checkout` after clone may be missed).
+**Dockerfile / apt / git:** Ecosystem **`apt`** lists Debian package names from `RUN` lines; licenses are not looked up (**`unknown`**, no registry warning). Ecosystem **`git`** lists clone URLs (normalized by dropping a trailing `.git`); license is **`unknown`** with **`git_not_resolved`**. Version pins and clone branches in Dockerfiles are parsed but not written to CSV/Excel. Parsing is heuristic: shell in `RUN` is not fully evaluated (variables, heredocs, and chained `git checkout` after clone may be missed).
+
+## Windows
+
+- Cache directory: `%USERPROFILE%\.zydro\depscan` (same as `os.path.expanduser("~")`).
+- **Git** must be on `PATH` ([Git for Windows](https://git-scm.com/download/win)); clone/fetch use UTF-8 for subprocess output.
+- Manifest paths in reports use **`/`** separators for stable CSV regardless of OS.
 
 ## Setup
 
@@ -40,14 +46,15 @@ depscan my-org another-org
 depscan my-org --format csv --output licenses.csv
 depscan my-org --format excel --output licenses.xlsx
 depscan my-org --format stdio
-depscan my-org --verbose   # -v: debug git clone/fetch on stderr
+depscan my-org --verbose   # -v: DEBUG (git + detailed); default stderr is INFO progress
+depscan my-org --quiet     # -q: only warnings/errors on stderr
 ```
 
 - Repositories are stored under `~/.zydro/depscan/{org}/{repo}`. If a directory is already a git checkout, the tool runs a shallow `fetch` and `reset --hard` to match the default branch; if that fails or the path is not a repo, it removes the directory and clones again.
 
 ## Output columns
 
-CSV and Excel: `repository` (as `org-name/repo-name`), `ecosystem` (`npm`, `pypi`, `apt`, or `git`), `package`, `license` (raw registry value for npm/pypi; **`unknown`** for apt/git).
+CSV and Excel: `repository` (as `org-name/repo-name`), `ecosystem` (`npm`, `pypi`, `apt`, or `git`), `package`, `license` (registry value for npm/PyPI; **`unknown`** for **apt** and **git**).
 
 Rows are deduplicated on `(organization, repository, ecosystem, package)` internally; the first seen manifest path is used only for warnings.
 

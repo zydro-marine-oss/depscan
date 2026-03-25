@@ -1,6 +1,8 @@
 import json
 import os
 
+from depscan.paths import safe_relpath
+
 
 _SKIP_SPEC_PREFIXES = (
     "file:",
@@ -60,5 +62,5 @@ def iter_package_json_deps(repo_root):
         _merge_dep_map(merged, data.get("dependencies"))
         _merge_dep_map(merged, data.get("devDependencies"))
         for pkg, spec in merged.items():
-            rel = os.path.relpath(path, repo_root)
+            rel = safe_relpath(path, repo_root)
             yield pkg, spec or "", rel
