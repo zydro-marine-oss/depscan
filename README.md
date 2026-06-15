@@ -4,6 +4,12 @@ Scans all projects in a GitHub org for dependencies &amp; generates a license re
 
 **!!! This is AI slop. Use at your own risk. !!!**
 
+## Why use this?
+
+Review your codebase for licenses for due diligence or technical auditing.
+
+## Overview
+
 Scans one or more GitHub organizations’ repositories for **`package.json`**, **`requirements.txt`**, **`pyproject.toml`** (PEP 621 `project` / Poetry / Flit metadata), **`setup.py`** (`install_requires` / `extras_require` via AST), and each **`Dockerfile`** ( **`apt`** / **`apt-get install`** and **`git clone`** in `RUN`, shell or JSON form). It resolves **registry-declared** licenses from npm and PyPI only, and writes **CSV on stdout** (summarized license families) or full-detail CSV/Excel files.
 
 This reports direct dependencies listed in those manifest files, not full transitive closure from lockfiles. Python manifests skip `node_modules`, `__pycache__`, `.git`, typical venv dirs, and Poetry/path/git URL deps that are not PyPI names.
